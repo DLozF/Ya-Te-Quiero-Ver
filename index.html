@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ya mero nos vemos</title>
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#F8D7DC" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Ya mero" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,400..700,0..100,0..1&family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+  :root{
+    --paper:#FBF3EC;      /* beige background */
+    --sand:#EFE0D1;       /* warm edge / borders */
+    --blush:#F8D7DC;      /* soft pink */
+    --rose:#E38DA0;       /* pink accent */
+    --thread:#D94F5C;     /* the red line */
+    --sea:#AFD3E2;        /* map water */
+    --land:#B9D8B0;       /* map land */
+    --ink:#4A3A38;        /* text */
+    --ink-soft:#8C736E;   /* secondary text */
+    --radius:22px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:17px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* paper grain */
+  body::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.35;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+  }
+
+  .wrap{position:relative; z-index:1; max-width:1040px; margin:0 auto; padding:0 22px}
+
+  /* ---------- header ---------- */
+  header{padding:64px 0 30px; text-align:center}
+  .eyebrow{
+    font-family:"DM Mono",ui-monospace,monospace;
+    font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--ink-soft); margin:0 0 18px;
+  }
+  .eyebrow span{color:var(--thread)}
+  h1{
+    font-family:"Fraunces",Georgia,serif;
+    font-variation-settings:"SOFT" 100,"WONK" 1,"opsz" 144;
+    font-weight:600;
+    font-size:clamp(2.6rem,8vw,4.6rem);
+    line-height:1.02;
+    letter-spacing:-.02em;
+    margin:0;
+  }
+  h1 em{font-style:italic; color:var(--rose)}
+  .sub{margin:16px auto 0; max-width:44ch; color:var(--ink-soft)}
+
+  /* ---------- map + countdown ---------- */
+  .stage{
+    position:relative;
+    margin:38px 0 0;
+    border-radius:var(--radius);
+    overflow:hidden;
+    border:1px solid var(--sand);
+    box-shadow:0 22px 50px -30px rgba(120,70,70,.45);
+  }
+  #map{
+    height:clamp(360px,58vh,540px);
+    width:100%;
+    background:var(--sea);
+  }
+  /* keep the greens and blues, just softened so they stay pastel */
+  #map .leaflet-tile-pane{
+    filter:saturate(.72) brightness(1.12) contrast(.9);
+  }
+  .leaflet-container{font-family:inherit; background:var(--sea)}
+
+  .thread{
+    stroke-dasharray:1 11;
+    stroke-linecap:round;
+    animation:march 2.4s linear infinite;
+  }
+  @keyframes march{to{stroke-dashoffset:-24}}
+
+  .pin{
+    display:grid; place-items:center;
+    font-family:"DM Mono",monospace; font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink); white-space:nowrap;
+  }
+  .pin b{
+    display:block; width:11px; height:11px; margin:0 auto 5px;
+    background:var(--thread); border:2px solid #fff; border-radius:50%;
+    box-shadow:0 1px 6px rgba(0,0,0,.3);
+  }
+  .pin i{
+    font-style:normal; background:rgba(251,243,236,.9);
+    padding:2px 7px; border-radius:20px; border:1px solid var(--sand);
+  }
+  .heart{font-size:22px; line-height:1; text-align:center; animation:beat 1.9s ease-in-out infinite}
+  @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
+
+  .card{
+    position:absolute; z-index:500; left:50%; bottom:20px; transform:translateX(-50%);
+    width:min(560px,calc(100% - 32px));
+    background:rgba(251,243,236,.93);
+    backdrop-filter:blur(6px);
+    border:1px solid var(--sand);
+    border-radius:18px;
+    padding:18px 16px 14px;
+    text-align:center;
+    box-shadow:0 14px 34px -20px rgba(120,70,70,.6);
+  }
+  .card-label{
+    font-family:"DM Mono",monospace; font-size:11px; letter-spacing:.2em;
+    text-transform:uppercase; color:var(--ink-soft); margin:0 0 12px;
+  }
+  .clock{display:flex; justify-content:center; gap:8px}
+  .unit{flex:1; max-width:118px; background:var(--blush); border-radius:12px; padding:10px 4px 8px}
+  .unit .num{
+    display:block;
+    font-family:"DM Mono",ui-monospace,monospace;
+    font-variant-numeric:tabular-nums;
+    font-size:clamp(1.7rem,7vw,2.5rem);
+    font-weight:500; line-height:1; color:var(--ink);
+  }
+  .unit .lab{
+    display:block; margin-top:7px;
+    font-family:"DM Mono",monospace; font-size:10px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--ink-soft);
+  }
+  .landed .clock{display:none}
+  .landed .card-label{
+    font-family:"Fraunces",Georgia,serif; font-size:1.5rem; letter-spacing:0;
+    text-transform:none; color:var(--thread); margin:6px 0 8px;
+  }
+
+
+  /* --- Leaflet core layout, inlined so the map still works if the CDN is blocked --- */
+  .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,
+  .leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+  .leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent}
+  .leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
+  .leaflet-container img{max-width:none!important;max-height:none!important}
+  .leaflet-tile{visibility:hidden;filter:inherit}
+  .leaflet-tile-loaded{visibility:inherit}
+  .leaflet-zoom-animated{transform-origin:0 0}
+  .leaflet-pane{z-index:400}
+  .leaflet-tile-pane{z-index:200}
+  .leaflet-overlay-pane{z-index:400}
+  .leaflet-shadow-pane{z-index:500}
+  .leaflet-marker-pane{z-index:600}
+  .leaflet-popup-pane{z-index:700}
+  .leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+  .leaflet-top,.leaflet-bottom{position:absolute;z-index:900;pointer-events:none}
+  .leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}
+  .leaflet-top .leaflet-control{margin-top:10px}
+  .leaflet-bottom .leaflet-control{margin-bottom:10px}
+  .leaflet-left .leaflet-control{margin-left:10px}
+  .leaflet-right .leaflet-control{float:right;margin-right:10px}
+  .leaflet-bar{background:#fff;border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+  .leaflet-bar a{display:block;width:28px;height:28px;line-height:28px;text-align:center;
+    text-decoration:none;color:var(--ink);font:16px/28px "DM Sans",sans-serif;border-bottom:1px solid var(--sand)}
+  .leaflet-bar a:last-child{border-bottom:none}
+  .leaflet-control-attribution{background:rgba(251,243,236,.8);padding:0 6px;font-size:10px;color:var(--ink-soft)}
+  .leaflet-control-attribution a{color:var(--ink-soft)}
+
+  /* --- drawn fallback map, used only if the tiles never arrive --- */
+  #fallback{width:100%;height:100%;display:block;background:linear-gradient(160deg,#C3DEEB,#A5C9DC)}
+  #fallback .land{fill:var(--land);stroke:#9DC293;stroke-width:1.5}
+  #fallback .lbl{font-family:"DM Mono",monospace;font-size:13px;letter-spacing:.08em;
+    text-transform:uppercase;fill:#2F4A44}
+  #fallback .dot{fill:var(--thread);stroke:#fff;stroke-width:2.5}
+
+
+  /* ---------- two cities: live clock + temperature ---------- */
+  .board{
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+    gap:10px; margin:34px 0 -4px; padding:16px 18px;
+    background:#fff9f4; border:1px solid var(--sand); border-radius:var(--radius) var(--radius) 0 0;
+    border-bottom:none;
+  }
+  .city{text-align:center}
+  .city .place{
+    font-family:"DM Mono",monospace; font-size:11px; letter-spacing:.2em;
+    text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px;
+  }
+  .city .time{
+    font-family:"DM Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;
+    font-size:clamp(1.15rem,4.5vw,1.6rem); font-weight:500; line-height:1;
+  }
+  .city .temp{
+    display:block; margin-top:6px; font-family:"DM Mono",monospace; font-size:12px;
+    color:var(--ink-soft); min-height:1em;
+  }
+  .board .between{
+    font-size:18px; color:var(--thread); transform:translateY(-2px);
+  }
+  .stage{border-top-left-radius:0; border-top-right-radius:0}
+
+  /* ---------- photo strip ---------- */
+  section.fotos{margin:56px 0 0}
+  .tape{
+    display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center;
+    gap:26px 28px; margin-top:24px;
+  }
+  .tape figure{
+    margin:0; width:clamp(150px,44vw,230px);
+    background:#fff; padding:10px 10px 34px;
+    border:1px solid var(--sand); border-radius:4px;
+    box-shadow:0 12px 26px -18px rgba(120,70,70,.75);
+    position:relative;
+  }
+  .tape figure::before{
+    content:""; position:absolute; top:-9px; left:50%; transform:translateX(-50%) rotate(-2deg);
+    width:58px; height:18px; background:rgba(248,215,220,.75);
+    border:1px solid rgba(227,141,160,.35); border-radius:2px;
+  }
+  .tape figure:nth-child(odd){transform:rotate(-2.2deg)}
+  .tape figure:nth-child(even){transform:rotate(1.8deg)}
+  .tape figure:nth-child(3n){transform:rotate(-.8deg)}
+  .tape img{display:block; width:100%; height:auto; border-radius:2px; background:var(--blush)}
+  .tape figcaption{
+    position:absolute; left:0; right:0; bottom:9px; text-align:center;
+    font-family:"Fraunces",Georgia,serif; font-style:italic; font-size:13px; color:var(--ink-soft);
+  }
+
+  /* ---------- reply button ---------- */
+  .reply{text-align:center; margin:52px 0 0}
+  .reply a{
+    display:inline-block; text-decoration:none;
+    background:var(--rose); color:#fff9f4;
+    font-family:"DM Sans",sans-serif; font-weight:500; font-size:16px;
+    padding:15px 30px; border-radius:999px;
+    box-shadow:0 12px 24px -14px rgba(227,141,160,.95);
+    transition:transform .15s ease, background .15s ease;
+  }
+  .reply a:hover{background:#D97A8F; transform:translateY(-2px)}
+  .reply a:active{transform:translateY(0)}
+  .reply p{margin:12px 0 0; font-size:13px; color:var(--ink-soft)}
+
+  /* ---------- stats + notes ---------- */
+  .strip{
+    display:flex; flex-wrap:wrap; gap:14px; margin:26px 0 0;
+    font-family:"DM Mono",monospace; font-size:12px; letter-spacing:.06em;
+    color:var(--ink-soft);
+  }
+  .strip div{
+    flex:1 1 180px; background:#fff9f4; border:1px solid var(--sand);
+    border-radius:14px; padding:14px 16px;
+  }
+  .strip b{
+    display:block; font-family:"Fraunces",Georgia,serif; font-weight:600;
+    font-size:1.5rem; letter-spacing:-.01em; color:var(--ink); margin-bottom:2px;
+  }
+
+  section.notes{margin:54px 0 0}
+  h2{
+    font-family:"Fraunces",Georgia,serif;
+    font-variation-settings:"SOFT" 100,"WONK" 1;
+    font-weight:600; font-size:1.9rem; margin:0 0 6px; letter-spacing:-.01em;
+  }
+  .notes p.lead{margin:0 0 22px; color:var(--ink-soft)}
+  ul.list{list-style:none; margin:0; padding:0; display:grid; gap:12px}
+  ul.list li{
+    background:#fff9f4; border:1px solid var(--sand); border-left:4px solid var(--blush);
+    border-radius:14px; padding:14px 18px;
+  }
+  ul.list li::before{content:"♥"; color:var(--rose); margin-right:10px}
+
+  footer{
+    margin:64px 0 48px; padding-top:22px; border-top:1px solid var(--sand);
+    text-align:center; color:var(--ink-soft); font-size:14px;
+  }
+  footer span{color:var(--rose)}
+
+  a:focus-visible,button:focus-visible,.leaflet-container:focus-visible{
+    outline:3px solid var(--rose); outline-offset:3px;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .thread{animation:none}
+    .heart{animation:none}
+    .reply a{transition:none}
+  }
+  @media (max-width:520px){
+    header{padding-top:44px}
+    .card{bottom:12px; padding:14px 12px 10px}
+    .board{padding:13px 12px; gap:6px}
+    .tape{gap:16px}
+    .unit{padding:8px 2px 6px}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Honolulu <span>&#10230;</span> McAllen &nbsp;·&nbsp; Wed Aug 19 &nbsp;·&nbsp; 11:30 AM</p>
+    <h1>Ya mero nos vemos <em id="name">CHIKIII</em>!!!</h1>
+    <p class="sub">No sabes cuánto te he extrañado mi niña hermosa, te amo y te extraño con todo mi corazón</p>
+  </header>
+
+  <div class="board">
+    <div class="city">
+      <p class="place">Hawái</p>
+      <p class="time" id="clockHI">—</p>
+      <span class="temp" id="tempHI"></span>
+    </div>
+    <div class="between">&#10084;&#65039;</div>
+    <div class="city">
+      <p class="place">McAllen</p>
+      <p class="time" id="clockTX">—</p>
+      <span class="temp" id="tempTX"></span>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div id="map" role="img" aria-label="Map showing Honolulu, Hawaii connected to McAllen, Texas by a dotted red line"></div>
+    <div class="card" id="card">
+      <p class="card-label" id="cardLabel"></p>
+      <div class="clock">
+        <div class="unit"><span class="num" id="d">00</span><span class="lab">Days</span></div>
+        <div class="unit"><span class="num" id="h">00</span><span class="lab">Hours</span></div>
+        <div class="unit"><span class="num" id="m">00</span><span class="lab">Minutes</span></div>
+        <div class="unit"><span class="num" id="s">00</span><span class="lab">Seconds</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="strip">
+    <div><b id="miles">—</b>Millas entre nosotros</div>
+  </div>
+
+  <section class="notes">
+    <h2>Lo que te espera:</h2>
+    <ul class="list">
+      <li>Un Legato BIEN rico</li>
+      <li>Taco P with Beans</li>
+      <li>Un Abrazo SUPER fuerte con unos BESOTES</li>
+    </ul>
+  </section>
+
+  <section class="fotos" id="fotos" hidden>
+    <h2>Nosotros</h2>
+    <div class="tape" id="tape"></div>
+  </section>
+
+  <div class="reply" id="reply" hidden>
+    <a id="replyLink" href="#">Ya la vi &#129402;</a>
+    <p>Un toque y el mensaje ya va escrito</p>
+  </div>
+
+  <footer>Te Extraño Andrea <span>&#9829;</span></footer>
+</div>
+
+<script>
+/* =======================================================================
+   EDIT THIS BLOCK — everything on the page comes from here.
+   Dates use the format YEAR-MONTH-DAYThour:minute:second-05:00
+   The -05:00 at the end means Texas time (Central). Keep it.
+   ======================================================================= */
+const CONFIG = {
+  name:      "CHIKIII",
+  arrival:   "2026-08-19T11:30:00-05:00",   // when she lands in McAllen
+  departed:  "2026-08-12T09:00:00-05:00",   // when she left — moves the heart along the line
+  from: { label: "Honolulu",  lat:  21.3069, lng: -157.8583, zona: "Pacific/Honolulu" },
+  to:   { label: "McAllen",   lat:  26.2034, lng:  -98.2300, zona: "America/Chicago"  },
+
+  // Your number, so the button texts YOU. Keep the +1 and no spaces or dashes.
+  telefono: "+19564453604",
+  mensaje:  "Ya vi la página... te amo mucho 🥹💗",
+
+  // Photos. Put the image files in a folder named fotos/ next to this file.
+  // Any photo that is missing just disappears — nothing breaks.
+  fotos: [
+    { src: "fotos/1.jpg", pie: "" },
+    { src: "fotos/2.jpg", pie: "" },
+    { src: "fotos/3.jpg", pie: "" }
+  ]
+};
+/* ===================== stop editing here ============================== */
+
+const target = new Date(CONFIG.arrival);
+const start  = new Date(CONFIG.departed);
+
+/* ---------------------------------------------------------------
+   The clock runs on its own. Nothing about the map can stop it.
+   --------------------------------------------------------------- */
+const pad = n => String(n).padStart(2, "0");
+const el = { d: document.getElementById("d"), h: document.getElementById("h"),
+             m: document.getElementById("m"), s: document.getElementById("s") };
+
+let moveHeart = null;   // the map fills this in once it is ready
+
+function tick() {
+  const now  = Date.now();
+  const left = target - now;
+  const span = target - start;
+  const done = Math.min(1, Math.max(0, span > 0 ? (now - start) / span : 1));
+
+  if (moveHeart) { try { moveHeart(done); } catch (e) {} }
+
+  if (left <= 0) {
+    document.getElementById("card").classList.add("landed");
+    document.getElementById("cardLabel").textContent = "¡Ya llegaste! \u{1F90D}";
+    document.title = "¡Ya llegaste!";
+    clearInterval(timer);
+    return;
+  }
+  const sec = Math.floor(left / 1000);
+  el.d.textContent = pad(Math.floor(sec / 86400));
+  el.h.textContent = pad(Math.floor(sec / 3600) % 24);
+  el.m.textContent = pad(Math.floor(sec / 60) % 60);
+  el.s.textContent = pad(sec % 60);
+}
+tick();
+const timer = setInterval(tick, 1000);
+
+/* ---------------------------------------------------------------
+   Load Leaflet. Three mirrors, then the drawn map as a last resort.
+   --------------------------------------------------------------- */
+const MIRRORS = [
+  "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
+  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+];
+
+function loadLeaflet(i) {
+  if (window.L) { startMap(); return; }
+  if (i >= MIRRORS.length) { drawFallbackMap(); return; }
+  const tag = document.createElement("script");
+  tag.src = MIRRORS[i];
+  tag.onload  = () => (window.L ? startMap() : loadLeaflet(i + 1));
+  tag.onerror = () => loadLeaflet(i + 1);
+  document.head.appendChild(tag);
+}
+loadLeaflet(0);
+
+/* great-circle points so the line curves the way a plane actually flies */
+function greatCircle(a, b, steps) {
+  const rad = Math.PI / 180, deg = 180 / Math.PI;
+  const p1 = a.lat * rad, l1 = a.lng * rad, p2 = b.lat * rad, l2 = b.lng * rad;
+  const d = 2 * Math.asin(Math.sqrt(
+    Math.sin((p2 - p1) / 2) ** 2 +
+    Math.cos(p1) * Math.cos(p2) * Math.sin((l2 - l1) / 2) ** 2
+  ));
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const f = i / steps;
+    const A = Math.sin((1 - f) * d) / Math.sin(d);
+    const B = Math.sin(f * d) / Math.sin(d);
+    const x = A * Math.cos(p1) * Math.cos(l1) + B * Math.cos(p2) * Math.cos(l2);
+    const y = A * Math.cos(p1) * Math.sin(l1) + B * Math.cos(p2) * Math.sin(l2);
+    const z = A * Math.sin(p1) + B * Math.sin(p2);
+    pts.push([Math.atan2(z, Math.hypot(x, y)) * deg, Math.atan2(y, x) * deg]);
+  }
+  return { points: pts, meters: d * 6371008.8 };
+}
+
+const arc = greatCircle(CONFIG.from, CONFIG.to, 160);
+document.getElementById("miles").textContent =
+  Math.round(arc.meters / 1609.344).toLocaleString();
+
+function startMap() {
+  try {
+    const map = L.map("map", { scrollWheelZoom: false, zoomControl: true, minZoom: 2, maxZoom: 8 });
+
+    // Green land, blue ocean. If one tile server is unreachable, try the next.
+    const TILES = [
+      { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}",
+        attribution: "Tiles &copy; Esri", maxZoom: 8 },
+      { url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        attribution: "&copy; OpenStreetMap &copy; CARTO", maxZoom: 19 },
+      { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attribution: "&copy; OpenStreetMap", maxZoom: 19 }
+    ];
+
+    let layer = null;
+    function useTiles(i) {
+      if (i >= TILES.length) return;
+      if (layer) map.removeLayer(layer);
+      let failed = false;
+      layer = L.tileLayer(TILES[i].url, { attribution: TILES[i].attribution, maxZoom: TILES[i].maxZoom });
+      layer.on("tileerror", function () {
+        if (failed) return;
+        failed = true;
+        useTiles(i + 1);
+      });
+      layer.addTo(map);
+    }
+    useTiles(0);
+
+    L.polyline(arc.points, { color: "#D94F5C", weight: 3, opacity: .95, className: "thread" }).addTo(map);
+
+    [CONFIG.from, CONFIG.to].forEach(place => {
+      L.marker([place.lat, place.lng], {
+        interactive: false,
+        icon: L.divIcon({ className: "",
+          html: '<div class="pin"><b></b><i>' + place.label + "</i></div>",
+          iconSize: [110, 42], iconAnchor: [55, 12] })
+      }).addTo(map);
+    });
+
+    const heart = L.marker(arc.points[0], {
+      interactive: false,
+      icon: L.divIcon({ className: "", html: '<div class="heart">&#10084;&#65039;</div>',
+        iconSize: [24, 24], iconAnchor: [12, 12] })
+    }).addTo(map);
+
+    const bounds = L.latLngBounds(arc.points);
+    map.fitBounds(bounds, { padding: [50, 50] });
+    map.setMaxBounds(bounds.pad(1.2));
+
+    moveHeart = f => heart.setLatLng(arc.points[Math.round(f * (arc.points.length - 1))]);
+    moveHeart(Math.min(1, Math.max(0, (Date.now() - start) / (target - start))));
+  } catch (err) {
+    drawFallbackMap();
+  }
+}
+
+/* Drawn map: no library, no tiles, no internet. Same two pins, same red thread. */
+function drawFallbackMap() {
+  const box = document.getElementById("map");
+  box.innerHTML =
+    '<svg id="fallback" viewBox="0 0 700 380" preserveAspectRatio="xMidYMid slice">' +
+      '<path class="land" d="M470 90 L700 60 L700 330 L520 320 Q470 250 470 90 Z"/>' +
+      '<path class="land" d="M96 268 l14 -9 12 10 -10 12 z"/>' +
+      '<path class="land" d="M120 286 l22 -6 8 14 -20 8 z"/>' +
+      '<path id="fbThread" class="thread" d="M132 272 Q360 120 566 196" fill="none" ' +
+        'stroke="#D94F5C" stroke-width="3" stroke-linecap="round"/>' +
+      '<circle class="dot" cx="132" cy="272" r="6"/><text class="lbl" x="132" y="302" text-anchor="middle">Honolulu</text>' +
+      '<circle class="dot" cx="566" cy="196" r="6"/><text class="lbl" x="566" y="228" text-anchor="middle">McAllen</text>' +
+      '<text id="fbHeart" x="132" y="272" font-size="20" text-anchor="middle" dominant-baseline="central">&#10084;&#65039;</text>' +
+    "</svg>";
+
+  const path = document.getElementById("fbThread");
+  const mark = document.getElementById("fbHeart");
+  const len  = path.getTotalLength();
+  moveHeart = f => {
+    const p = path.getPointAtLength(f * len);
+    mark.setAttribute("x", p.x);
+    mark.setAttribute("y", p.y);
+  };
+  moveHeart(Math.min(1, Math.max(0, (Date.now() - start) / (target - start))));
+}
+
+/* ---------------------------------------------------------------
+   Two clocks, live.
+   --------------------------------------------------------------- */
+function reloj(zona) {
+  return new Intl.DateTimeFormat("es-MX", {
+    hour: "numeric", minute: "2-digit", hour12: true, timeZone: zona
+  }).format(new Date()).replace(/\s?([ap])\.?\s?m\.?/i, (_, x) => " " + x.toUpperCase() + "M");
+}
+function relojes() {
+  try {
+    document.getElementById("clockHI").textContent = reloj(CONFIG.from.zona);
+    document.getElementById("clockTX").textContent = reloj(CONFIG.to.zona);
+  } catch (e) {}
+}
+relojes();
+setInterval(relojes, 1000);
+
+/* ---------------------------------------------------------------
+   Temperature in both cities. Free service, no sign-up, no key.
+   If it does not answer, the clocks simply stay on their own.
+   --------------------------------------------------------------- */
+function clima(place, into) {
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + place.lat +
+              "&longitude=" + place.lng + "&current=temperature_2m&temperature_unit=fahrenheit";
+  fetch(url)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+      const t = data && data.current && data.current.temperature_2m;
+      if (typeof t === "number") document.getElementById(into).textContent = Math.round(t) + "°F";
+    })
+    .catch(() => {});
+}
+clima(CONFIG.from, "tempHI");
+clima(CONFIG.to,   "tempTX");
+
+/* ---------------------------------------------------------------
+   Photo strip. Each photo is added only once it loads, so a missing
+   file leaves no empty frame behind.
+   --------------------------------------------------------------- */
+(function fotos() {
+  const wrap = document.getElementById("tape");
+  const sec  = document.getElementById("fotos");
+  (CONFIG.fotos || []).forEach(f => {
+    const img = new Image();
+    img.src = f.src;
+    img.alt = f.pie || "";
+    img.onload = () => {
+      const fig = document.createElement("figure");
+      fig.appendChild(img);
+      if (f.pie) {
+        const cap = document.createElement("figcaption");
+        cap.textContent = f.pie;
+        fig.appendChild(cap);
+      }
+      wrap.appendChild(fig);
+      sec.hidden = false;
+    };
+  });
+})();
+
+/* ---------------------------------------------------------------
+   "Ya la vi" button — opens her Messages with the text ready to send.
+   Hidden until a real number is set, so it can never send to nobody.
+   --------------------------------------------------------------- */
+(function boton() {
+  const num = (CONFIG.telefono || "").replace(/[^\d+]/g, "");
+  if (!num) return;                                    // no number set, stay hidden
+  const link = document.getElementById("replyLink");
+  link.href = "sms:" + num + "?&body=" + encodeURIComponent(CONFIG.mensaje || "");
+  document.getElementById("reply").hidden = false;
+})();
+</script>
+</body>
+</html>
