@@ -362,8 +362,8 @@
   </section>
 
   <div class="reply" id="reply" hidden>
-    <a id="replyLink" href="#">Te Amo vi &#129402;</a>
-    <p>Click Here</p>
+    <a id="replyLink" href="#">Te Amo&#129402;</a>
+    <p>Un toque y el mensaje ya va escrito</p>
   </div>
 
   <footer>Te Extraño Andrea <span>&#9829;</span></footer>
@@ -388,12 +388,12 @@ const CONFIG = {
   telefono: "+19564453604",
   mensaje:  "Ya vi la página... te amo mucho 🥹💗",
 
-  // Photos. Put the image files in a folder named fotos/ next to this file.
+  // Photos. Keep the image files right next to this index.html file.
   // Any photo that is missing just disappears — nothing breaks.
   fotos: [
-    { src: "fotos/1.jpg", pie: "" },
-    { src: "fotos/2.jpg", pie: "" },
-    { src: "fotos/3.jpg", pie: "" }
+    { src: "1.jpg", pie: "" },
+    { src: "2.jpg", pie: "" },
+    { src: "3.jpg", pie: "" }
   ]
 };
 /* ===================== stop editing here ============================== */
@@ -604,9 +604,15 @@ clima(CONFIG.to,   "tempTX");
 (function fotos() {
   const wrap = document.getElementById("tape");
   const sec  = document.getElementById("fotos");
+
   (CONFIG.fotos || []).forEach(f => {
+    // Try the path as written; if the file is not there, try the same
+    // name sitting next to index.html with no folder. Either layout works.
+    const solo  = f.src.split("/").pop();
+    const rutas = f.src === solo ? [solo, "fotos/" + solo] : [f.src, solo];
+    let i = 0;
+
     const img = new Image();
-    img.src = f.src;
     img.alt = f.pie || "";
     img.onload = () => {
       const fig = document.createElement("figure");
@@ -619,6 +625,12 @@ clima(CONFIG.to,   "tempTX");
       wrap.appendChild(fig);
       sec.hidden = false;
     };
+    img.onerror = () => {
+      i++;
+      if (i < rutas.length) { img.src = rutas[i]; }
+      else { console.warn("No encontré la foto:", rutas.join(" ni ")); }
+    };
+    img.src = rutas[0];
   });
 })();
 
