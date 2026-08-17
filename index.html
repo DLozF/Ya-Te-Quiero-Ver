@@ -4,7 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ya mero nos vemos</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌺</text></svg>" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#F8D7DC" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Ya mero" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -181,6 +187,72 @@
     text-transform:uppercase;fill:#2F4A44}
   #fallback .dot{fill:var(--thread);stroke:#fff;stroke-width:2.5}
 
+
+  /* ---------- two cities: live clock + temperature ---------- */
+  .board{
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+    gap:10px; margin:34px 0 -4px; padding:16px 18px;
+    background:#fff9f4; border:1px solid var(--sand); border-radius:var(--radius) var(--radius) 0 0;
+    border-bottom:none;
+  }
+  .city{text-align:center}
+  .city .place{
+    font-family:"DM Mono",monospace; font-size:11px; letter-spacing:.2em;
+    text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px;
+  }
+  .city .time{
+    font-family:"DM Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums;
+    font-size:clamp(1.15rem,4.5vw,1.6rem); font-weight:500; line-height:1;
+  }
+  .city .temp{
+    display:block; margin-top:6px; font-family:"DM Mono",monospace; font-size:12px;
+    color:var(--ink-soft); min-height:1em;
+  }
+  .board .between{
+    font-size:18px; color:var(--thread); transform:translateY(-2px);
+  }
+  .stage{border-top-left-radius:0; border-top-right-radius:0}
+
+  /* ---------- photo strip ---------- */
+  section.fotos{margin:56px 0 0}
+  .tape{
+    display:flex; flex-wrap:wrap; justify-content:center; gap:22px 26px; margin-top:22px;
+  }
+  .tape figure{
+    margin:0; width:clamp(140px,42vw,205px);
+    background:#fff; padding:10px 10px 34px;
+    border:1px solid var(--sand); border-radius:4px;
+    box-shadow:0 12px 26px -18px rgba(120,70,70,.75);
+    position:relative;
+  }
+  .tape figure::before{
+    content:""; position:absolute; top:-9px; left:50%; transform:translateX(-50%) rotate(-2deg);
+    width:58px; height:18px; background:rgba(248,215,220,.75);
+    border:1px solid rgba(227,141,160,.35); border-radius:2px;
+  }
+  .tape figure:nth-child(odd){transform:rotate(-2.2deg)}
+  .tape figure:nth-child(even){transform:rotate(1.8deg)}
+  .tape figure:nth-child(3n){transform:rotate(-.8deg)}
+  .tape img{display:block; width:100%; aspect-ratio:4/5; object-fit:cover; border-radius:2px; background:var(--blush)}
+  .tape figcaption{
+    position:absolute; left:0; right:0; bottom:9px; text-align:center;
+    font-family:"Fraunces",Georgia,serif; font-style:italic; font-size:13px; color:var(--ink-soft);
+  }
+
+  /* ---------- reply button ---------- */
+  .reply{text-align:center; margin:52px 0 0}
+  .reply a{
+    display:inline-block; text-decoration:none;
+    background:var(--rose); color:#fff9f4;
+    font-family:"DM Sans",sans-serif; font-weight:500; font-size:16px;
+    padding:15px 30px; border-radius:999px;
+    box-shadow:0 12px 24px -14px rgba(227,141,160,.95);
+    transition:transform .15s ease, background .15s ease;
+  }
+  .reply a:hover{background:#D97A8F; transform:translateY(-2px)}
+  .reply a:active{transform:translateY(0)}
+  .reply p{margin:12px 0 0; font-size:13px; color:var(--ink-soft)}
+
   /* ---------- stats + notes ---------- */
   .strip{
     display:flex; flex-wrap:wrap; gap:14px; margin:26px 0 0;
@@ -223,10 +295,13 @@
   @media (prefers-reduced-motion:reduce){
     .thread{animation:none}
     .heart{animation:none}
+    .reply a{transition:none}
   }
   @media (max-width:520px){
     header{padding-top:44px}
     .card{bottom:12px; padding:14px 12px 10px}
+    .board{padding:13px 12px; gap:6px}
+    .tape{gap:16px}
     .unit{padding:8px 2px 6px}
   }
 </style>
@@ -239,6 +314,20 @@
     <h1>Ya mero nos vemos <em id="name">CHIKIII</em>!!!</h1>
     <p class="sub">No sabes cuánto te he extrañado mi niña hermosa, te amo y te extraño con todo mi corazón</p>
   </header>
+
+  <div class="board">
+    <div class="city">
+      <p class="place">Hawái</p>
+      <p class="time" id="clockHI">—</p>
+      <span class="temp" id="tempHI"></span>
+    </div>
+    <div class="between">&#10084;&#65039;</div>
+    <div class="city">
+      <p class="place">McAllen</p>
+      <p class="time" id="clockTX">—</p>
+      <span class="temp" id="tempTX"></span>
+    </div>
+  </div>
 
   <div class="stage">
     <div id="map" role="img" aria-label="Map showing Honolulu, Hawaii connected to McAllen, Texas by a dotted red line"></div>
@@ -266,6 +355,16 @@
     </ul>
   </section>
 
+  <section class="fotos" id="fotos" hidden>
+    <h2>Nosotros</h2>
+    <div class="tape" id="tape"></div>
+  </section>
+
+  <div class="reply" id="reply" hidden>
+    <a id="replyLink" href="#">Ya la vi &#129402;</a>
+    <p>Un toque y el mensaje ya va escrito</p>
+  </div>
+
   <footer>Te Extraño Andrea <span>&#9829;</span></footer>
 </div>
 
@@ -279,8 +378,22 @@ const CONFIG = {
   name:      "CHIKIII",
   arrival:   "2026-08-19T11:30:00-05:00",   // when she lands in McAllen
   departed:  "2026-08-12T09:00:00-05:00",   // when she left — moves the heart along the line
-  from: { label: "Honolulu",  lat:  21.3069, lng: -157.8583 },
-  to:   { label: "McAllen",   lat:  26.2034, lng:  -98.2300 }
+  from: { label: "Honolulu",  lat:  21.3069, lng: -157.8583, zona: "Pacific/Honolulu" },
+  to:   { label: "McAllen",   lat:  26.2034, lng:  -98.2300, zona: "America/Chicago"  },
+
+  // Your number, so the button texts YOU. Keep the +1 and no spaces or dashes.
+  telefono: "+19564453604",
+  mensaje:  "Ya vi la página... te amo mucho 🥹💗",
+
+  // Photos. Put the image files in a folder named fotos/ next to this file.
+  // Any photo that is missing just disappears — nothing breaks.
+  fotos: [
+    { src: "fotos/1.jpg", pie: "" },
+    { src: "fotos/2.jpg", pie: "" },
+    { src: "fotos/3.jpg", pie: "" },
+    { src: "fotos/4.jpg", pie: "" },
+    { src: "fotos/5.jpg", pie: "" }
+  ]
 };
 /* ===================== stop editing here ============================== */
 
@@ -447,6 +560,78 @@ function drawFallbackMap() {
   };
   moveHeart(Math.min(1, Math.max(0, (Date.now() - start) / (target - start))));
 }
+
+/* ---------------------------------------------------------------
+   Two clocks, live.
+   --------------------------------------------------------------- */
+function reloj(zona) {
+  return new Intl.DateTimeFormat("es-MX", {
+    hour: "numeric", minute: "2-digit", hour12: true, timeZone: zona
+  }).format(new Date()).replace(/\s?([ap])\.?\s?m\.?/i, (_, x) => " " + x.toUpperCase() + "M");
+}
+function relojes() {
+  try {
+    document.getElementById("clockHI").textContent = reloj(CONFIG.from.zona);
+    document.getElementById("clockTX").textContent = reloj(CONFIG.to.zona);
+  } catch (e) {}
+}
+relojes();
+setInterval(relojes, 1000);
+
+/* ---------------------------------------------------------------
+   Temperature in both cities. Free service, no sign-up, no key.
+   If it does not answer, the clocks simply stay on their own.
+   --------------------------------------------------------------- */
+function clima(place, into) {
+  const url = "https://api.open-meteo.com/v1/forecast?latitude=" + place.lat +
+              "&longitude=" + place.lng + "&current=temperature_2m&temperature_unit=fahrenheit";
+  fetch(url)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+      const t = data && data.current && data.current.temperature_2m;
+      if (typeof t === "number") document.getElementById(into).textContent = Math.round(t) + "°F";
+    })
+    .catch(() => {});
+}
+clima(CONFIG.from, "tempHI");
+clima(CONFIG.to,   "tempTX");
+
+/* ---------------------------------------------------------------
+   Photo strip. Each photo is added only once it loads, so a missing
+   file leaves no empty frame behind.
+   --------------------------------------------------------------- */
+(function fotos() {
+  const wrap = document.getElementById("tape");
+  const sec  = document.getElementById("fotos");
+  (CONFIG.fotos || []).forEach(f => {
+    const img = new Image();
+    img.src = f.src;
+    img.alt = f.pie || "";
+    img.onload = () => {
+      const fig = document.createElement("figure");
+      fig.appendChild(img);
+      if (f.pie) {
+        const cap = document.createElement("figcaption");
+        cap.textContent = f.pie;
+        fig.appendChild(cap);
+      }
+      wrap.appendChild(fig);
+      sec.hidden = false;
+    };
+  });
+})();
+
+/* ---------------------------------------------------------------
+   "Ya la vi" button — opens her Messages with the text ready to send.
+   Hidden until a real number is set, so it can never send to nobody.
+   --------------------------------------------------------------- */
+(function boton() {
+  const num = (CONFIG.telefono || "").replace(/[^\d+]/g, "");
+  if (!num) return;                                    // no number set, stay hidden
+  const link = document.getElementById("replyLink");
+  link.href = "sms:" + num + "?&body=" + encodeURIComponent(CONFIG.mensaje || "");
+  document.getElementById("reply").hidden = false;
+})();
 </script>
 </body>
 </html>
