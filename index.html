@@ -18,6 +18,8 @@
     --blush:#F8D7DC;      /* soft pink */
     --rose:#E38DA0;       /* pink accent */
     --thread:#D94F5C;     /* the red line */
+    --sea:#AFD3E2;        /* map water */
+    --land:#B9D8B0;       /* map land */
     --ink:#4A3A38;        /* text */
     --ink-soft:#8C736E;   /* secondary text */
     --radius:22px;
@@ -75,13 +77,13 @@
   #map{
     height:clamp(360px,58vh,540px);
     width:100%;
-    background:var(--blush);
+    background:var(--sea);
   }
-  /* tint the map into the pastel palette */
+  /* keep the greens and blues, just softened so they stay pastel */
   #map .leaflet-tile-pane{
-    filter:sepia(.45) saturate(.75) hue-rotate(-12deg) brightness(1.06) contrast(.92);
+    filter:saturate(.72) brightness(1.12) contrast(.9);
   }
-  .leaflet-container{font-family:inherit; background:#F3E3DA}
+  .leaflet-container{font-family:inherit; background:var(--sea)}
 
   .thread{
     stroke-dasharray:1 11;
@@ -173,10 +175,10 @@
   .leaflet-control-attribution a{color:var(--ink-soft)}
 
   /* --- drawn fallback map, used only if the tiles never arrive --- */
-  #fallback{width:100%;height:100%;display:block;background:linear-gradient(160deg,#F6E4E7,#F3E3DA)}
-  #fallback .land{fill:#EFE0D1;stroke:#E4CDBA;stroke-width:1.5}
+  #fallback{width:100%;height:100%;display:block;background:linear-gradient(160deg,#C3DEEB,#A5C9DC)}
+  #fallback .land{fill:var(--land);stroke:#9DC293;stroke-width:1.5}
   #fallback .lbl{font-family:"DM Mono",monospace;font-size:13px;letter-spacing:.08em;
-    text-transform:uppercase;fill:var(--ink)}
+    text-transform:uppercase;fill:#2F4A44}
   #fallback .dot{fill:var(--thread);stroke:#fff;stroke-width:2.5}
 
   /* ---------- stats + notes ---------- */
@@ -365,22 +367,32 @@ document.getElementById("miles").textContent =
 
 function startMap() {
   try {
-    const map = L.map("map", { scrollWheelZoom: false, zoomControl: true });
+    const map = L.map("map", { scrollWheelZoom: false, zoomControl: true, minZoom: 2, maxZoom: 8 });
 
-    let switched = false;
-    const tiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      attribution: "&copy; OpenStreetMap &copy; CARTO", maxZoom: 19
-    }).addTo(map);
+    // Green land, blue ocean. If one tile server is unreachable, try the next.
+    const TILES = [
+      { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}",
+        attribution: "Tiles &copy; Esri", maxZoom: 8 },
+      { url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        attribution: "&copy; OpenStreetMap &copy; CARTO", maxZoom: 19 },
+      { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        attribution: "&copy; OpenStreetMap", maxZoom: 19 }
+    ];
 
-    // if CARTO is unreachable, fall back to plain OpenStreetMap tiles once
-    tiles.on("tileerror", function () {
-      if (switched) return;
-      switched = true;
-      map.removeLayer(tiles);
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap", maxZoom: 19
-      }).addTo(map);
-    });
+    let layer = null;
+    function useTiles(i) {
+      if (i >= TILES.length) return;
+      if (layer) map.removeLayer(layer);
+      let failed = false;
+      layer = L.tileLayer(TILES[i].url, { attribution: TILES[i].attribution, maxZoom: TILES[i].maxZoom });
+      layer.on("tileerror", function () {
+        if (failed) return;
+        failed = true;
+        useTiles(i + 1);
+      });
+      layer.addTo(map);
+    }
+    useTiles(0);
 
     L.polyline(arc.points, { color: "#D94F5C", weight: 3, opacity: .95, className: "thread" }).addTo(map);
 
